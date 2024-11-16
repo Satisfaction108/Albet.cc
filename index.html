@@ -124,15 +124,15 @@
     }
 
     // Update minimap
-    function updateMinimap() {
-      const scaledX = (x * minimapScale) - 2.5; // Center the minimap ball
-      const scaledY = (y * minimapScale) - 2.5; // Center the minimap ball
+function updateMinimap() {
+  const scaledX = (x * minimapScale) - (ballSize * minimapScale / 2); // Center the minimap ball
+  const scaledY = (y * minimapScale) - (ballSize * minimapScale / 2); // Center the minimap ball
 
-      minimapBall.style.left = `${scaledX}px`;
-      minimapBall.style.top = `${scaledY}px`;
+  minimapBall.style.left = `${scaledX}px`;
+  minimapBall.style.top = `${scaledY}px`;
 
-      minimap.style.transform = `scale(${minimapScale}) translate(0, 0)`;
-    }
+  minimap.style.transform = `scale(${minimapScale}) translate(0, 0)`;
+}
 
     // Update ball position and visuals
     function updateBallPosition() {
