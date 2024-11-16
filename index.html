@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Albet.cc</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: lightgray;
+    }
+
+    #map {
+      position: absolute;
+      width: 4000px;
+      height: 4000px;
+      background-color: white;
+      z-index: 1;
+    }
+
+    #ball {
+      position: absolute;
+      width: 50px;
+      height: 50px;
+      background-color: #42cbf5; /* Ball color */
+      border-radius: 50%;
+      border: 1px solid #000000;
+      z-index: 2;
+    }
+
+    #minimap-container {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      width: 150px;
+      height: 150px;
+      background-color: rgba(240, 240, 240, 0.8);
+      border: 2px solid #525151;
+      border-radius: 15px;
+      overflow: hidden;
+      z-index: 3;
+    }
+
+    #minimap {
+      position: relative;
+      width: 4000px;
+      height: 4000px;
+      background-color: #e0e0e0;
+    }
+
+    .minimap-ball {
+      position: absolute;
+      width: 5px;
+      height: 5px;
+      background-color: #42cbf5; /* Minimap ball color matches the main ball */
+      border-radius: 50%;
+    }
+
+    .grid-line {
+      position: absolute;
+      background-color: #ddd; /* Lighter grid color */
+    }
+  </style>
+</head>
+<body>
+  <div id="map">
+    <div id="ball"></div>
+  </div>
+  <div id="minimap-container">
+    <div id="minimap"></div>
+  </div>
+
+  <script>
+    // Select elements
+    const ball = document.getElementById('ball');
+    const map = document.getElementById('map');
+    const minimap = document.getElementById('minimap');
+    const minimapContainer = document.getElementById('minimap-container');
+
+    // Constants
+    const ballSize = 50;
+    const mapSize = 4000;
+    const minimapScale = 150 / 4000; // Minimap scale
+    const movementSpeed = 2;
+    const gridSize = 25; // Smaller grid size (25px by 25px grid)
+
+    // Ball's initial position
+    let x = parseFloat(localStorage.getItem('ballX')) || Math.random() * (mapSize - ballSize);
+    let y = parseFloat(localStorage.getItem('ballY')) || Math.random() * (mapSize - ballSize);
+
+    // Clamp position to ensure it's within bounds
+    x = Math.max(0, Math.min(x, mapSize - ballSize));
+    y = Math.max(0, Math.min(y, mapSize - ballSize));
+
+    // Create minimap ball
+    const minimapBall = document.createElement('div');
+    minimapBall.classList.add('minimap-ball');
+    minimap.appendChild(minimapBall);
+
+    // Debounce savePosition to avoid excessive writes to localStorage
+    const debounce = (fn, delay) => {
+      let timeoutId;
+      return (...args) => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => fn(...args), delay);
+      };
+    };
+
+    const savePosition = debounce(() => {
+      localStorage.setItem('ballX', x);
+      localStorage.setItem('ballY', y);
+    }, 300);
+
+    // Center camera on the ball
+    function centerCamera() {
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+
+      const offsetX = x + ballSize / 2 - viewportWidth / 2;
+      const offsetY = y + ballSize / 2 - viewportHeight / 2;
+
+      map.style.transform = `translate(${-offsetX}px, ${-offsetY}px)`;
+    }
+
+    // Update minimap
+    function updateMinimap() {
+      const scaledX = (x * minimapScale) - 2.5; // Center the minimap ball
+      const scaledY = (y * minimapScale) - 2.5; // Center the minimap ball
+
+      minimapBall.style.left = `${scaledX}px`;
+      minimapBall.style.top = `${scaledY}px`;
+
+      minimap.style.transform = `scale(${minimapScale}) translate(0, 0)`;
+    }
+
+    // Update ball position and visuals
+    function updateBallPosition() {
+      ball.style.left = `${x}px`;
+      ball.style.top = `${y}px`;
+
+      centerCamera();
+      updateMinimap();
+    }
+
+    // Key states for smooth movement
+    let keys = {};
+
+    window.addEventListener('keydown', (e) => {
+      keys[e.key] = true;
+    });
+
+    window.addEventListener('keyup', (e) => {
+      keys[e.key] = false;
+    });
+
+    // Create the grid
+    function createGrid() {
+      const fragment = document.createDocumentFragment();
+      for (let i = -gridSize; i < mapSize + gridSize; i += gridSize) {
+        // Horizontal lines
+        const horizontalLine = document.createElement('div');
+        horizontalLine.classList.add('grid-line');
+        horizontalLine.style.width = `${mapSize + 2 * gridSize}px`; // Extend beyond map
+        horizontalLine.style.height = '1px';
+        horizontalLine.style.top = `${i}px`;
+        fragment.appendChild(horizontalLine);
+
+        // Vertical lines
+        const verticalLine = document.createElement('div');
+        verticalLine.classList.add('grid-line');
+        verticalLine.style.width = '1px';
+        verticalLine.style.height = `${mapSize + 2 * gridSize}px`; // Extend beyond map
+        verticalLine.style.left = `${i}px`;
+        fragment.appendChild(verticalLine);
+      }
+      map.appendChild(fragment);
+    }
+
+    // Main game loop
+    function gameLoop() {
+      if (keys['w'] || keys['ArrowUp']) y = Math.max(0, y - movementSpeed);
+      if (keys['a'] || keys['ArrowLeft']) x = Math.max(0, x - movementSpeed);
+      if (keys['s'] || keys['ArrowDown']) y = Math.min(mapSize - ballSize, y + movementSpeed);
+      if (keys['d'] || keys['ArrowRight']) x = Math.min(mapSize - ballSize, x + movementSpeed);
+
+      updateBallPosition();
+      savePosition();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Initialize
+    function init() {
+      ball.style.width = `${ballSize}px`;
+      ball.style.height = `${ballSize}px`;
+      createGrid(); // Create the grid
+      updateBallPosition();
+      gameLoop();
+    }
+
+    // Start the game
+    init();
+  </script>
+</body>
+</html>
